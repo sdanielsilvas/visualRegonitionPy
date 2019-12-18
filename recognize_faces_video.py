@@ -10,6 +10,10 @@ import imutils
 import pickle
 import time
 import cv2
+import os
+import asyncio
+from azure.iot.device.aio import IoTHubDeviceClient
+#from azure.iot.device import auth
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -33,6 +37,26 @@ print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
 writer = None
 time.sleep(2.0)
+
+# Fetch the connection string from an enviornment variable
+conn_str = os.getenv("HostName=VisualRecognitionHub.azure-devices.net;DeviceId=webcam-test;SharedAccessKey=uXnmYRt8SUkDbICRpsmwrxZQ5gzP8UD4gk4HC6f/ymc=")
+
+async def testMsg():
+	await sendMessage()
+
+async def sendMessage():
+	# Create instance of the device client using the authentication provider
+    device_client = IoTHubDeviceClient.create_from_connection_string(conn_str)
+
+    # Connect the device client.
+    await device_client.connect()
+
+    # Send a single message
+    print("Sending message...")
+    await device_client.send_message("This is a message that is being sent")
+    print("Message successfully sent!")
+    # finally, disconnect
+    #await device_client.disconnect()
 
 # loop over frames from the video file stream
 while True:
@@ -82,7 +106,7 @@ while True:
 		
 		# update the list of names
 		names.append(name)
-
+	await testMsg()
 	# loop over the recognized faces
 	for ((top, right, bottom, left), name) in zip(boxes, names):
 		# rescale the face coordinates
@@ -97,6 +121,7 @@ while True:
 		y = top - 15 if top - 15 > 15 else top + 15
 		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
 			0.75, (0, 255, 0), 2)
+		
 
 	# if the video writer is None *AND* we are supposed to write
 	# the output video to disk initialize the writer
@@ -127,3 +152,4 @@ vs.stop()
 # check to see if the video writer point needs to be released
 if writer is not None:
 	writer.release()
+
